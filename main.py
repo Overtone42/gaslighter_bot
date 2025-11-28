@@ -15,6 +15,24 @@ TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("ERROR: BOT_TOKEN is missing in Railway variables!")
 
+# --------- KEYWORDS THAT TRIGGER GASLIGHTING ----------
+KEYWORDS = [
+    "down",
+    "dump",
+    "rug",
+    "rekt",
+    "scam",
+    "sell",
+    "selling",
+    "crash",
+    "dead",
+    "liquidity",
+    "volume",
+    "exit",
+    "bear",
+    "panic",
+]
+
 # --------- GASLIGHT LINES ----------
 GASLIGHT_REPLIES = [
     "Chart’s not down — you’re just holding it wrong. 📉➡️📈",
@@ -33,14 +51,30 @@ GASLIGHT_REPLIES = [
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔥 Welcome to the $GAS Gaslighter Bot!\n"
-        "Type anything and I'll gaslight you."
+        "I only show up when you start talking bearish."
     )
 
-async def gaslight(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def gaslight_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Manual /gaslight command."""
     reply = random.choice(GASLIGHT_REPLIES)
     await update.message.reply_text(reply)
 
-# --------- MAIN (NO asyncio.run HERE) ----------
+async def gaslight_on_keywords(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Auto-gaslight only when certain words are in the message."""
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.lower()
+
+    # Check if any keyword appears in the message
+    if any(word in text for word in KEYWORDS):
+        reply = random.choice(GASLIGHT_REPLIES)
+        await update.message.reply_text(reply)
+    else:
+        # No keywords → stay silent
+        return
+
+# --------- MAIN (SYNC ENTRYPOINT) ----------
 def main() -> None:
     print("Starting gaslighter bot… token present:", bool(TOKEN))
 
@@ -48,12 +82,11 @@ def main() -> None:
 
     # Commands
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("gaslight", gaslight))
+    app.add_handler(CommandHandler("gaslight", gaslight_command))
 
-    # Auto-gaslight every text message
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, gaslight))
+    # Auto-gaslight only when keywords appear
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, gaslight_on_keywords))
 
-    # This manages its own event loop internally
     app.run_polling()
 
 if __name__ == "__main__":
